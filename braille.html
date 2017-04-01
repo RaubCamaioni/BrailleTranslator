@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style>				
+		#row1, #row2, #row3 {
+		}
+		
+		#dot1, #dot3, #dot5 {
+			left: -5px;
+		}
+		
+		#dot2, #dot4, #dot6 {
+			left:  5px;
+		}
+		
+		body {
+			text-align: center;
+			white-space: nowrap;
+			background-color: #ffffcc;
+		}
+		
+		#grid {
+			display: inline-block;
+		}
+		
+		#translationBox {
+			display: inline-block;
+			border: 1px solid black;
+			width: 300px;
+			height: 100px;
+		}
+	</style>
+</head>
+<body>
+
+
+<h1>Braille Translator</h1>
+
+<div id="grid">
+	<div id="row1">
+		<img src="dot.png" alt="dot1" id="dot1" style="width:10px;height:10px;opacity: .2;">
+		<img src="dot.png" alt="dot2" id="dot2" style="width:10px;height:10px;opacity: .2;">
+	</div>
+	<div id="row2">
+		<img src="dot.png" alt="dot3" id="dot3" style="width:10px;height:10px;opacity: .2;">
+		<img src="dot.png" alt="dot4" id="dot4" style="width:10px;height:10px;opacity: .2;">
+	</div>
+	<div id="row3">
+		<img src="dot.png" alt="dot5" id="dot5" style="width:10px;height:10px;opacity: .2;">
+		<img src="dot.png" alt="dot6" id="dot6" style="width:10px;height:10px;opacity: .2;">
+	</div>
+</div>
+
+<div id="translationBox">
+	<p>Translation</p>
+	<div id="translationText" style="font-size:40px">Click the Dots</div>
+</div>
+
+<script>
+	var DOTWIDTH  = '50px';  //Control the size of the dots
+	var DOTHEIGHT = '50px';
+	
+	var dots = []; //Populated in for loop, dots objects (images)
+	
+	/*
+	*	Braille->English "binary translation" (from wiki page). I can do searches for English->Braille.
+	*	
+	*	Dots layout			The weights of the dots are binary, 2^(# of dot). This is used to index array.
+	*	(5) (4)
+	*	(3)	(2)
+	*	(1) (0)
+	*
+	*	
+	*/
+	var brailleToAlph = [
+							'(space)', //00
+							'(uppercase prefix)', //01
+							"'", //02
+							'-', //03
+							
+							'(contraction)', //04
+							'(letter prefix)', //05
+							'in', //06
+							'"', //07
+							
+							',', //08
+							'en', //09
+							';', //0A
+							'" or ?', //0B
+							
+							':', //0C
+							'.', //0D
+							'!', //0E
+							'(or)', //0F
+							
+							'(accent prefix)', //10
+							'(italic prefix)', //11
+							'st', //12
+							'ing', //13
+							
+							'(currency prefix)', //14
+							'(contraction)', //15
+							'ar', //16
+							'(number prefix)', //17
+							
+							'i', //18
+							'ow', //19
+							's', //1A
+							'the', //1B
+					
+							'j', //1C
+							'w', //1D
+							't', //1E
+							'with', //1F
+							
+							'a', //20
+							'ch', //21
+							'k', //22
+							'u', //23
+							
+							'e', //24
+							'wh', //25
+							'o', //26
+							'z', //27
+		
+							'b', //28
+							'gh', //29
+							'l', //2A
+							'v', //2B
+							
+							'h', //2C
+							'ou', //2D
+							'r', //2E
+							'of', //2F
+							
+							'c', //30
+							'sh', //31
+							'm', //32
+							'x', //33
+							
+							'd', //34
+							'th', //35	
+							'n', //36
+							'y', //37
+							
+							'f', //38
+							'ed', //39	
+							'p', //3A
+							'and', //3B
+							
+							'g', //3C
+							'er', //3D
+							'q', //3E
+							'for', //3F
+							
+							'?', //40
+							'?', //41
+							'?', //42
+							'?', //43
+							
+							'?', //44
+							'?', //45
+							'?', //46
+							'?', //47
+		
+							'?', //48
+							'?', //49
+							'?', //4A
+							'?', //4B
+							
+							'?', //4C
+							'?', //4D
+							'?', //4E
+							'?', //4F
+							
+							'?', //50
+							'?', //51
+							'?', //52
+							'?', //53
+							
+							'?', //54
+							'?', //55	
+							'?', //56
+							'?', //57
+							
+							'?', //58
+							'?', //59	
+							'?', //5A
+							'?', //5B
+							
+							'?', //5C
+							'?', //5D
+							'?', //5E
+							'?', //5F
+						];
+	
+	/*
+	*	Controls what dots are grayed out(more transparent).  Then calls the translation function
+	*	and displays it on the page.
+	*/
+	function imgClick() {
+		if(this.style.opacity == "1"){
+			this.style.opacity = "0.2";
+		}else {
+			this.style.opacity = "1";
+		}
+		
+		brailleConsole();
+		document.getElementById("translationText").innerHTML = brailleToAlph[brailleIndex()].toUpperCase();
+	}
+	
+	/*
+	*	Logs information that is useful when debugging bad translations.
+	*/
+	function brailleConsole() {
+		for(i = 0; i < dots.length; i++) {
+			console.log("dot" + i + ":" + dots[i].style.opacity);
+		}
+		console.log("Index:" + (brailleIndex() >>> 0).toString(2));
+		console.log('---------------------');
+	}
+	
+	/*
+	*	Returns the calculated index of the braille character.
+	*	This index is used to translate with an array.
+	*/
+	function brailleIndex() {
+		var index = 0;
+		for(i = 0; i < dots.length; i++) {		
+			if(dots[i].style.opacity == "1") {
+				index += Math.pow(2, dots.length-1-i);
+			}
+		}
+		return index;
+	}
+	
+	/*
+	*	This is the "constructor".  Sets up the dots[] object array.
+	*	Does some formatting so you don't have to go through all the html.
+	*
+	*/
+	function constructor() {
+	
+		for(i = 1; i < 7; i++) {
+			dotIndex = "dot" + i;
+			dotObject = document.getElementById(dotIndex);  //adds each dot to the dots[] array
+			dots[dots.length] = dotObject;
+			dotObject.onclick = imgClick;  //adds the onclick function to each dot
+			
+			if(dotObject && dotObject.style) {      //change the dots width, the check is not really needed.
+				dotObject.style.width  = DOTHEIGHT;
+				dotObject.style.height = DOTWIDTH;
+			}
+		}
+		
+		document.getElementById("row1").style.height = DOTHEIGHT;  //if the dots are bigger they need more space between them
+		document.getElementById("row2").style.height = DOTHEIGHT;
+		document.getElementById("row3").style.height = DOTHEIGHT;
+	}
+	
+	//The cunstructor is called after everything has been defined
+	constructor();
+</script>
+
+</body>
+</html>
